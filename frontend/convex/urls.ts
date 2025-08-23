@@ -22,3 +22,52 @@ export const getUrls = query({
         return await ctx.db.query("urls").collect();
     },
 });
+
+// Update URL with contact information
+export const updateUrlWithContacts = mutation({
+    args: {
+        urlId: v.id("urls"),
+        contactInfo: v.array(
+            v.object({
+                name: v.string(),
+                phone: v.string(),
+                email: v.optional(v.string()),
+                business: v.optional(v.string()),
+                address: v.optional(v.string()),
+                notes: v.optional(v.string()),
+            })
+        ),
+        status: v.string(),
+    },
+    handler: async (ctx, args) => {
+        await ctx.db.patch(args.urlId, {
+            contactInfo: args.contactInfo,
+            status: args.status,
+            lastProcessed: Date.now(),
+        });
+        return args.urlId;
+    },
+});
+
+// Get URL by ID with contact information
+export const getUrlById = query({
+    args: { urlId: v.id("urls") },
+    handler: async (ctx, args) => {
+        return await ctx.db.get(args.urlId);
+    },
+});
+
+// Update URL status
+export const updateUrlStatus = mutation({
+    args: {
+        urlId: v.id("urls"),
+        status: v.string(),
+    },
+    handler: async (ctx, args) => {
+        await ctx.db.patch(args.urlId, {
+            status: args.status,
+            lastProcessed: Date.now(),
+        });
+        return args.urlId;
+    },
+});
