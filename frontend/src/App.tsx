@@ -1,15 +1,39 @@
-
 import { useState } from "react";
-import { Button } from "./components/ui/button";
-import { Input } from "./components/ui/input";
+import LeadGenerationTester from "./test";
+
+const API_BASE_URL = "http://localhost:3001";
+
+export type Lead = {
+  name: string;
+  address: string;
+  phoneNumber: string;
+};
 
 function App() {
-  const [url, setUrl] = useState("");
-  return (
-    <div className="h-screen w-screen px-1/2 bg-red-300">
-      <Input value={url} onChange={(e) => setUrl(e.target.value)} />
-    </div>
-  );
+  const [leads, setLeads] = useState<Lead[]>([]);
+
+  const onCall = async (url: string) => {
+    const response = await fetch(
+      `${API_BASE_URL}/api/leads/analyze-company-leads`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ companyUrl: url }),
+      }
+    );
+    const reader = response.body!.getReader();
+    const decoder = new TextDecoder("utf-8");
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value);
+      setLeads((cur) => [...cur, JSON.parse(chunk)]);
+    }
+  };
+
+  return <LeadGenerationTester leads={leads} onCall={onCall} />;
 }
 
 export default App;

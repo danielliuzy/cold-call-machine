@@ -5,9 +5,9 @@ import {
   Building,
   Phone,
   Loader2,
-  AlertCircle,
   CheckCircle,
 } from "lucide-react";
+import type { Lead } from "./App";
 
 // Type definitions based on the API schema
 interface CustomerLead {
@@ -50,21 +50,22 @@ interface ErrorResponse {
 
 type ApiResponse = BasicApiResponse | DetailedApiResponse | ErrorResponse;
 
-type AnalysisType = "basic" | "detailed";
-
-const LeadGenerationTester: React.FC = () => {
-  const [companyUrl, setCompanyUrl] = useState<string>("");
+const LeadGenerationTester: React.FC<{
+  leads: Lead[];
+  onCall: (url: string) => Promise<void>;
+}> = ({ leads, onCall }) => {
+  const [companyUrl, setCompanyUrl] = useState<string>(
+    "https://www.markegardfamily.com/"
+  );
   const [loading, setLoading] = useState<boolean>(false);
   const [results, setResults] = useState<
     BasicApiResponse | DetailedApiResponse | null
   >(null);
   const [error, setError] = useState<string | null>(null);
-  const [analysisType, setAnalysisType] = useState<AnalysisType>("basic");
 
   // Change this to your actual API base URL
-  const API_BASE_URL = "http://localhost:3001";
 
-  const handleAnalyze = async (endpoint: string): Promise<void> => {
+  const handleAnalyze = async (): Promise<void> => {
     if (!companyUrl.trim()) {
       setError("Please enter a company URL");
       return;
@@ -74,39 +75,9 @@ const LeadGenerationTester: React.FC = () => {
     setError(null);
     setResults(null);
 
-    try {
-        console.log(`${API_BASE_URL}${endpoint} ${companyUrl}`)
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ companyUrl: companyUrl.trim() }),
-      });
+    await onCall(companyUrl);
 
-      const data: ApiResponse = await response.json();
-
-      if (!response.ok) {
-        const errorData = data as ErrorResponse;
-        throw new Error(
-          errorData.error || `HTTP error! status: ${response.status}`
-        );
-      }
-
-      if (data.success) {
-        setResults(data as BasicApiResponse | DetailedApiResponse);
-      } else {
-        const errorData = data as ErrorResponse;
-        throw new Error(errorData.error || "Analysis failed");
-      }
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "An unknown error occurred";
-      setError(errorMessage);
-      console.error("API Error:", err);
-    } finally {
-      setLoading(false);
-    }
+    setLoading(false);
   };
 
   const validateUrl = (url: string): boolean => {
@@ -122,10 +93,6 @@ const LeadGenerationTester: React.FC = () => {
     setCompanyUrl(e.target.value);
   };
 
-  const handleAnalysisTypeChange = (type: AnalysisType): void => {
-    setAnalysisType(type);
-  };
-
   const isDetailedResponse = (
     response: BasicApiResponse | DetailedApiResponse
   ): response is DetailedApiResponse => {
@@ -137,11 +104,9 @@ const LeadGenerationTester: React.FC = () => {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Lead Generation API Tester
-          </h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">LeadGenAI</h1>
           <p className="text-lg text-gray-600">
-            Analyze companies and generate potential customer leads
+            Analyze companies and call customer leads
           </p>
         </div>
 
@@ -177,103 +142,31 @@ const LeadGenerationTester: React.FC = () => {
               )}
             </div>
 
-            {/* Analysis Type Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Analysis Type
-              </label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <button
-                  type="button"
-                  onClick={() => handleAnalysisTypeChange("basic")}
-                  className={`p-4 rounded-lg border-2 text-left transition-all ${
-                    analysisType === "basic"
-                      ? "border-blue-500 bg-blue-50 text-blue-700"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
-                >
-                  <h3 className="font-semibold mb-1">Basic Analysis</h3>
-                  <p className="text-sm text-gray-600">
-                    Quick company analysis and lead generation
-                  </p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleAnalysisTypeChange("detailed")}
-                  className={`p-4 rounded-lg border-2 text-left transition-all ${
-                    analysisType === "detailed"
-                      ? "border-blue-500 bg-blue-50 text-blue-700"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
-                >
-                  <h3 className="font-semibold mb-1">Detailed Analysis</h3>
-                  <p className="text-sm text-gray-600">
-                    Enhanced analysis with competitor research
-                  </p>
-                </button>
-              </div>
-            </div>
-
             {/* Action Buttons */}
             <div className="flex gap-4">
               <button
                 type="button"
-                onClick={() =>
-                  handleAnalyze("/api/leads/analyze-company-leads")
-                }
-                disabled={
-                  loading ||
-                  !companyUrl ||
-                  !validateUrl(companyUrl) ||
-                  analysisType !== "basic"
-                }
-                className="flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
+                onClick={handleAnalyze}
+                disabled={loading || !companyUrl || !validateUrl(companyUrl)}
+                className="cursor-pointer flex-1 bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
               >
-                {loading && analysisType === "basic" ? (
+                {loading ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
                   <Search className="h-5 w-5" />
                 )}
-                Run Basic Analysis
-              </button>
-
-              <button
-                type="button"
-                onClick={() =>
-                  handleAnalyze("/api/leads/analyze-company-leads-detailed")
-                }
-                disabled={
-                  loading ||
-                  !companyUrl ||
-                  !validateUrl(companyUrl) ||
-                  analysisType !== "detailed"
-                }
-                className="flex-1 bg-indigo-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
-              >
-                {loading && analysisType === "detailed" ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <Search className="h-5 w-5" />
-                )}
-                Run Detailed Analysis
+                Call customers
               </button>
             </div>
           </div>
         </div>
 
         {/* Error Display */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-8">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0" />
-              <div>
-                <h3 className="text-lg font-semibold text-red-800">Error</h3>
-                <p className="text-red-700">{error}</p>
-              </div>
-            </div>
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-8">
+          <div className="flex items-center gap-3">
+            <div>{JSON.stringify(leads, null, 2)}</div>
           </div>
-        )}
+        </div>
 
         {/* Results Display */}
         {results && (
@@ -419,35 +312,6 @@ const LeadGenerationTester: React.FC = () => {
             </details>
           </div>
         )}
-
-        {/* API Endpoints Info */}
-        <div className="mt-12 bg-gray-900 text-white rounded-xl p-8">
-          <h2 className="text-2xl font-bold mb-6">API Information</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h3 className="font-semibold text-blue-300 mb-2">
-                Basic Endpoint
-              </h3>
-              <code className="text-sm bg-gray-800 p-2 rounded block">
-                POST /analyze-company-leads
-              </code>
-              <p className="text-gray-300 text-sm mt-2">
-                Quick company analysis and lead generation
-              </p>
-            </div>
-            <div>
-              <h3 className="font-semibold text-blue-300 mb-2">
-                Detailed Endpoint
-              </h3>
-              <code className="text-sm bg-gray-800 p-2 rounded block">
-                POST /analyze-company-leads-detailed
-              </code>
-              <p className="text-gray-300 text-sm mt-2">
-                Enhanced analysis with competitor research
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
