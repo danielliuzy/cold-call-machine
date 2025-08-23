@@ -24,6 +24,7 @@ router.post("/analyze-company-leads", async (req, res) => {
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   try {
+    console.log("analyzing...");
     const companyUrl = req.body.companyUrl;
 
     const response = await openai.responses.create({
@@ -32,38 +33,38 @@ router.post("/analyze-company-leads", async (req, res) => {
       input: `Visit the website ${companyUrl} and analyze the customer category this business would sell to in a B2B context. Also get the address of the business. Response in a concise manner.`,
     });
 
-    const existingCustomers: {
-      name: string;
-      address: string;
-      phoneNumber: string;
-    }[] = [];
+    // const existingCustomers: {
+    //   name: string;
+    //   address: string;
+    //   phoneNumber: string;
+    // }[] = [];
 
-    for (let i = 0; i < 10; i++) {
-      const leadGenTask = await browseruse.tasks.run({
-        task: `
+    await Promise.all(
+      new Array(10).fill(0).map(async (_, i) => {
+        const leadGenTask = await browseruse.tasks.run({
+          task: `
       New task:
       1. Go to https://maps.google.com
       2. Search for the business in google maps
-      3. Find 1 potential customer nearby that is not under EXISTING CUSTOMERS, click on them and use the extract structured data to get the name, address and phone number of the business. Do not leave google maps, only use the information provided there.
+      3. Find 1 potential customer nearby that is not under EXISTING CUSTOMERS, click on the result in row number ${i} and use the extract structured data to get the name, address and phone number of the business. Do not leave google maps, only use the information provided there.
       4. Return the results as a JSON array with the fields name, address and phoneNumber. Return the phone number with country code, no spaces or dashes or parentheses.
 
       ===CONTEXT===
       ${response.output_text}
-      
-      ===EXISTING CUSTOMERS===
-      ${JSON.stringify(existingCustomers, null, 2)}
       `,
-        agentSettings: {
-          llm: "o3",
-        },
-        schema: CustomerLead,
-      });
+          agentSettings: {
+            llm: "o3",
+          },
+          schema: CustomerLead,
+        });
 
-      if (leadGenTask.parsedOutput) {
-        res.write(JSON.stringify(leadGenTask.parsedOutput));
-        existingCustomers.push(leadGenTask.parsedOutput);
-      }
-    }
+        if (leadGenTask.parsedOutput) {
+          res.write(JSON.stringify(leadGenTask.parsedOutput));
+        }
+        console.log("Completed 1 leadgen");
+      })
+    );
+    console.log("DONE!!!");
     res.end();
   } catch (error) {
     console.error("Error processing request:", error);
