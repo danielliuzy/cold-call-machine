@@ -12,9 +12,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "browser-use-sdk": "^1.2.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "openai": "^5.15.0",
+    "zod": "^4.1.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
