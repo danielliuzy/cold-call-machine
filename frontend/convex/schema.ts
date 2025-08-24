@@ -10,11 +10,8 @@ export default defineSchema({
             v.array(
                 v.object({
                     name: v.string(),
-                    phone: v.string(),
-                    email: v.optional(v.string()),
-                    business: v.optional(v.string()),
-                    address: v.optional(v.string()),
-                    notes: v.optional(v.string()),
+                    phoneNumber: v.string(),
+                    address: v.string(),
                 })
             )
         ),
@@ -23,9 +20,9 @@ export default defineSchema({
 
     calls: defineTable({
         urlId: v.id("urls"),
-        contactId: v.string(), // Reference to contact in the contactInfo array
+        contactId: v.optional(v.string()), // Reference to contact in the contactInfo array
         phoneNumber: v.string(),
-        status: v.string(), // scheduled, in-progress, completed, failed
+        status: v.optional(v.string()), // scheduled, in-progress, completed, failed
         scheduledAt: v.number(),
         startedAt: v.optional(v.number()),
         completedAt: v.optional(v.number()),
