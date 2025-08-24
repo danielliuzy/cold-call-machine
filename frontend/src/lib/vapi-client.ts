@@ -9,16 +9,15 @@ const vapi = new VapiClient({
 
 export interface ContactInfo {
     name: string;
-    phone: string;
-    email: string;
+    phoneNumber: string;
+    email?: string;
     business?: string;
-    address?: string;
+    address: string;
     notes?: string;
 }
 
 export interface CallConfig {
     phoneNumber: string;
-    contactName: string;
     businessName?: string;
 }
 

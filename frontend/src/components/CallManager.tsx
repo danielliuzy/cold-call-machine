@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Badge } from "./ui/badge";
+// import { Badge } from "./ui/badge";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { makeCall } from "../lib/vapi-client";
@@ -25,7 +25,7 @@ export function CallManager({ urlId, contactInfo }: CallManagerProps) {
     const callStats = useQuery(api.vapi.getCallStats);
 
     const handleMakeCall = async (contact: ContactInfo) => {
-        if (!contact.phone) {
+        if (!contact.phoneNumber) {
             alert("No phone number available for this contact");
             return;
         }
@@ -36,7 +36,7 @@ export function CallManager({ urlId, contactInfo }: CallManagerProps) {
         try {
             // Make the call via Vapi
             const vapiCallId = await makeCall({
-                phoneNumber: contact.phone,
+                phoneNumber: contact.phoneNumber,
                 contactName: contact.name,
                 businessName: contact.business,
             });
@@ -45,7 +45,7 @@ export function CallManager({ urlId, contactInfo }: CallManagerProps) {
             const callId = await scheduleCall({
                 urlId,
                 contactId: contact.name, // Using name as contact ID for simplicity
-                phoneNumber: contact.phone,
+                phoneNumber: contact.phoneNumber,
                 scheduledAt: Date.now(),
             });
 
@@ -57,7 +57,9 @@ export function CallManager({ urlId, contactInfo }: CallManagerProps) {
                 vapiCallId,
             });
 
-            alert(`Call initiated to ${contact.name} at ${contact.phone}`);
+            alert(
+                `Call initiated to ${contact.name} at ${contact.phoneNumber}`
+            );
         } catch (error) {
             console.error("Error making call:", error);
             alert(`Failed to make call: ${error}`);
@@ -67,20 +69,20 @@ export function CallManager({ urlId, contactInfo }: CallManagerProps) {
         }
     };
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case "scheduled":
-                return "bg-blue-100 text-blue-800";
-            case "in-progress":
-                return "bg-yellow-100 text-yellow-800";
-            case "completed":
-                return "bg-green-100 text-green-800";
-            case "failed":
-                return "bg-red-100 text-red-800";
-            default:
-                return "bg-gray-100 text-gray-800";
-        }
-    };
+    // const getStatusColor = (status: string) => {
+    //     switch (status) {
+    //         case "scheduled":
+    //             return "bg-blue-100 text-blue-800";
+    //         case "in-progress":
+    //             return "bg-yellow-100 text-yellow-800";
+    //         case "completed":
+    //             return "bg-green-100 text-green-800";
+    //         case "failed":
+    //             return "bg-red-100 text-red-800";
+    //         default:
+    //             return "bg-gray-100 text-gray-800";
+    //     }
+    // };
 
     return (
         <div className="space-y-6">
@@ -153,8 +155,8 @@ export function CallManager({ urlId, contactInfo }: CallManagerProps) {
                                         {contact.name}
                                     </h3>
                                     <div className="text-sm text-gray-600 space-y-1">
-                                        {contact.phone && (
-                                            <div>📞 {contact.phone}</div>
+                                        {contact.phoneNumber && (
+                                            <div>📞 {contact.phoneNumber}</div>
                                         )}
                                         {contact.email && (
                                             <div>✉️ {contact.email}</div>
@@ -174,7 +176,7 @@ export function CallManager({ urlId, contactInfo }: CallManagerProps) {
                                     <Button
                                         onClick={() => handleMakeCall(contact)}
                                         disabled={
-                                            isMakingCall || !contact.phone
+                                            isMakingCall || !contact.phoneNumber
                                         }
                                         className="w-full">
                                         {isMakingCall &&
@@ -187,11 +189,12 @@ export function CallManager({ urlId, contactInfo }: CallManagerProps) {
                                             scheduleCall({
                                                 urlId,
                                                 contactId: contact.name,
-                                                phoneNumber: contact.phone,
+                                                phoneNumber:
+                                                    contact.phoneNumber,
                                                 scheduledAt: Date.now() + 60000, // Schedule for 1 minute from now
                                             })
                                         }
-                                        disabled={!contact.phone}
+                                        disabled={!contact.phoneNumber}
                                         variant="outline"
                                         className="w-full">
                                         ⏰ Schedule Call
@@ -225,7 +228,7 @@ export function CallManager({ urlId, contactInfo }: CallManagerProps) {
                                             ).toLocaleString()}
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    {/* <div className="flex items-center gap-2">
                                         <Badge
                                             className={getStatusColor(
                                                 call.status
@@ -237,7 +240,7 @@ export function CallManager({ urlId, contactInfo }: CallManagerProps) {
                                                 {call.outcome}
                                             </Badge>
                                         )}
-                                    </div>
+                                    </div> */}
                                 </div>
                             ))}
                         </div>

@@ -30,11 +30,8 @@ export const updateUrlWithContacts = mutation({
         contactInfo: v.array(
             v.object({
                 name: v.string(),
-                phone: v.string(),
-                email: v.optional(v.string()),
-                business: v.optional(v.string()),
-                address: v.optional(v.string()),
-                notes: v.optional(v.string()),
+                phoneNumber: v.string(),
+                address: v.string(),
             })
         ),
         status: v.string(),

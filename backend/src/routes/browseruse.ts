@@ -40,7 +40,7 @@ router.post("/analyze-company-leads", async (req, res) => {
     });
 
     await Promise.all(
-      new Array(10).fill(0).map(async (_, i) => {
+      new Array(1).fill(0).map(async (_, i) => {
         const leadGenTask = await browseruse.tasks.run({
           task: `
       New task:
