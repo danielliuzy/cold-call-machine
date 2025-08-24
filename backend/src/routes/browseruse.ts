@@ -33,27 +33,28 @@ router.post("/analyze-company-leads", async (req, res) => {
       input: `Visit the website ${companyUrl} and analyze the customer category this business would sell to in a B2B context. Also get the address of the business. Response in a concise manner.`,
     });
 
-    // const existingCustomers: {
-    //   name: string;
-    //   address: string;
-    //   phoneNumber: string;
-    // }[] = [];
+    const businessNameInCompanyUrl = await openai.responses.create({
+      model: "gpt-4o",
+      tools: [{ type: "web_search_preview" }],
+      input: `Visit the website ${companyUrl} and extract the name of the business. Respond with just the name, no other text.`,
+    });
 
     await Promise.all(
       new Array(10).fill(0).map(async (_, i) => {
         const leadGenTask = await browseruse.tasks.run({
           task: `
       New task:
-      1. Go to https://maps.google.com
-      2. Search for the business in google maps
-      3. Find 1 potential customer nearby that is not under EXISTING CUSTOMERS, click on the result in row number ${i} and use the extract structured data to get the name, address and phone number of the business. Do not leave google maps, only use the information provided there.
-      4. Return the results as a JSON array with the fields name, address and phoneNumber. Return the phone number with country code, no spaces or dashes or parentheses.
+      1. You are given a business on google maps. Find 1 potential customer nearby that matches the target customer profile, click on the result in row number ${i} and use the extract structured data to get the name, address and phone number of the business. Do not leave google maps, only use the information provided there.
+      2. Return the results as a JSON object with the fields name, address and phoneNumber. Return the phone number with country code, no spaces or dashes or parentheses.
+      
+      NOTE: Make sure you only return one business, and your goal is to be fast. Return as soon as you have valid data. Think as little as possible.
 
       ===CONTEXT===
       ${response.output_text}
       `,
           agentSettings: {
-            llm: "o3",
+            llm: "gemini-2.5-flash",
+            startUrl: `https://google.com/maps/search/${businessNameInCompanyUrl.output_text}/`,
           },
           schema: CustomerLead,
         });
