@@ -32,6 +32,7 @@ export const updateUrlWithContacts = mutation({
                 name: v.string(),
                 phoneNumber: v.string(),
                 address: v.string(),
+                vapiCallId: v.string(),
             })
         ),
         status: v.string(),

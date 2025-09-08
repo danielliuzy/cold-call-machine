@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { makeCall } from "./lib/vapi-client";
+import { Link } from "react-router-dom";
 
 const API_BASE_URL = "http://localhost:3001";
 
@@ -21,11 +22,16 @@ type TransformedLead = {
 function App() {
     const [leads, setLeads] = useState<Lead[]>([]);
     const [currentUrl, setCurrentUrl] = useState("");
+    const [contactCallIds, setContactCallIds] = useState<{
+        [key: string]: string;
+    }>({});
 
     // Convex mutations and queries
     const insertUrl = useMutation(api.urls.insertUrl);
     const updateUrlWithContacts = useMutation(api.urls.updateUrlWithContacts);
     const urls = useQuery(api.urls.getUrls);
+    const scheduleCall = useMutation(api.vapi.scheduleCall);
+    const called = useRef(false);
 
     const onCall = async (url: string) => {
         setCurrentUrl(url);
@@ -54,6 +60,7 @@ function App() {
             const reader = response.body!.getReader();
             const decoder = new TextDecoder("utf-8");
             const allLeads: TransformedLead[] = [];
+            const contactCallIds: { [key: string]: string } = {};
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -69,28 +76,71 @@ function App() {
                         address: lead.address,
                     };
                     allLeads.push(transformedLead);
-                    makeCall({
-                        phoneNumber: lead.phoneNumber,
-                        businessName: lead.name,
-                    });
+
+                    // Make the call via Vapi and get the call ID
+                    try {
+                        const vapiCallId = await makeCall({
+                            phoneNumber: !called.current
+                                ? "+15109600603"
+                                : lead.phoneNumber, // Always call this number
+                            businessName: lead.address,
+                        });
+                        called.current = true;
+
+                        // Store the call ID for this specific contact
+                        contactCallIds[lead.name] = vapiCallId;
+                        setContactCallIds((prev) => ({
+                            ...prev,
+                            [lead.name]: vapiCallId,
+                        }));
+
+                        // Store the call in Convex DB with the Vapi call ID
+                        await scheduleCall({
+                            urlId,
+                            contactId: lead.name,
+                            phoneNumber: !called.current
+                                ? "+15109600603"
+                                : lead.phoneNumber,
+                            vapiCallId: vapiCallId,
+                            scheduledAt: Date.now(),
+                        });
+
+                        console.log(
+                            `✅ Auto-call initiated for ${lead.name} with Vapi ID: ${vapiCallId}`
+                        );
+                        console.log(
+                            `🔗 View call details: /call/${vapiCallId}`
+                        );
+                    } catch (callError) {
+                        console.error(
+                            `❌ Failed to auto-call ${lead.name}:`,
+                            callError
+                        );
+                    }
+
                     setLeads((cur) => [...cur, lead]); // Keep original format for display
                 } catch (e) {
                     console.log("Raw chunk:", chunk);
                 }
             }
 
-            // Store all leads in Convex DB
+            // Store all leads in Convex DB with their individual call IDs
             if (allLeads.length > 0) {
                 await updateUrlWithContacts({
                     urlId,
-                    contactInfo: allLeads,
+                    contactInfo: allLeads.map((lead) => ({
+                        name: lead.name,
+                        phoneNumber: lead.phoneNumber ?? "+15109600603",
+                        address: lead.address,
+                        vapiCallId: contactCallIds[lead.name],
+                    })),
                     status: "completed",
                 });
                 console.log(`✅ Stored ${allLeads.length} leads in Convex DB`);
             }
         } catch (error) {
             console.error("Error processing leads:", error);
-            alert(`Error: ${error}`);
+            // alert(`Error: ${error}`);
         }
     };
 
@@ -100,7 +150,7 @@ function App() {
                 {/* Header */}
                 <div className="text-center mb-8">
                     <h1 className="text-4xl font-bold text-gray-900 mb-2">
-                        LeadGenAI
+                        SalesMaxi.ai
                     </h1>
                     <p className="text-xl text-gray-600">
                         Analyze companies and call customer leads
@@ -123,7 +173,7 @@ function App() {
                         <button
                             onClick={() => onCall(currentUrl)}
                             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                            Call customers
+                            Find prospects
                         </button>
                     </div>
                 </div>
@@ -138,43 +188,62 @@ function App() {
                             <span className="px-4 py-2 bg-blue-100 text-blue-800 rounded-full font-medium">
                                 {leads.length} contacts found
                             </span>
+                            {/* <p>{leads[0].callId}</p> */}
                         </div>
 
                         <div className="grid gap-4">
-                            {leads.map((lead, index) => (
-                                <div
-                                    key={index}
-                                    className="p-4 border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex-1">
-                                            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                                                {lead.name}
-                                            </h3>
-                                            <div className="space-y-2 text-gray-700">
-                                                <div className="flex items-center">
-                                                    <span className="text-blue-600 mr-3">
-                                                        📞
-                                                    </span>
-                                                    <span className="font-medium">
-                                                        {lead.phoneNumber}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center">
-                                                    <span className="text-green-600 mr-3">
-                                                        📍
-                                                    </span>
-                                                    <span>{lead.address}</span>
+                            {leads
+                                .filter(
+                                    (lead) =>
+                                        lead.phoneNumber != null &&
+                                        lead.phoneNumber !== ""
+                                )
+                                .map((lead, index) => (
+                                    <div
+                                        key={index}
+                                        className="p-4 border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                                                    {lead.name}
+                                                </h3>
+                                                <div className="space-y-2 text-gray-700">
+                                                    <div className="flex items-center">
+                                                        <span className="text-blue-600 mr-3">
+                                                            📞
+                                                        </span>
+                                                        <span className="font-medium">
+                                                            {lead.phoneNumber}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center">
+                                                        <span className="text-green-600 mr-3">
+                                                            📍
+                                                        </span>
+                                                        <span>
+                                                            {lead.address}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div className="ml-4">
-                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                                                Contact #{index + 1}
-                                            </span>
+                                            <div className="ml-4 flex flex-col items-end gap-2">
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                                                    Contact #{index + 1}
+                                                </span>
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                                                    ✅ Call Initiated
+                                                </span>
+                                                <Link
+                                                    target="_blank"
+                                                    to={`/call/${contactCallIds[lead.name]}`}>
+                                                    <button className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800 hover:bg-purple-200 transition-colors">
+                                                        📞 View Call Details
+                                                    </button>
+                                                </Link>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
                         </div>
                     </div>
                 )}

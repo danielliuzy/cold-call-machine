@@ -7,6 +7,7 @@ export const scheduleCall = mutation({
         urlId: v.id("urls"),
         contactId: v.string(),
         phoneNumber: v.string(),
+        vapiCallId: v.string(),
         scheduledAt: v.number(),
     },
     handler: async (ctx, args) => {
@@ -16,6 +17,7 @@ export const scheduleCall = mutation({
             phoneNumber: args.phoneNumber,
             status: "scheduled",
             scheduledAt: args.scheduledAt,
+            vapiCallId: args.vapiCallId,
         });
         return callId;
     },

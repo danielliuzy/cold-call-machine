@@ -12,6 +12,7 @@ export default defineSchema({
                     name: v.string(),
                     phoneNumber: v.string(),
                     address: v.string(),
+                    callId: v.optional(v.string()),
                 })
             )
         ),

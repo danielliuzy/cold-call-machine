@@ -37,11 +37,11 @@ export const makeCall = async (config: CallConfig): Promise<string> => {
 
         // Create call using Vapi SDK
         const call = await vapi.calls.create({
-            phoneNumberId: "57d4951a-eeee-4a4b-9fdf-cda3cd02167f", // Your phone number ID from dashboard
+            phoneNumberId: "32f18aa4-5d6e-46c9-af19-17fbf11ac18f", // Your phone number ID from dashboard
             // customer: { number: formattedPhone },
             customer: { number: "+15109600603" },
             // assistantId: "b6258565-a11e-4e75-a5aa-bd7e7facffef", // Your assistant ID from dashboard
-            workflowId: "18fe8463-1e75-4409-bbc8-521846344e30",
+            workflowId: "3246bc70-d6c7-4ea9-8fdf-d22f41c30eab",
         });
 
         console.log(`✅ Vapi call created successfully:`, call);
